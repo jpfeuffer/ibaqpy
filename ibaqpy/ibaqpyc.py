@@ -2,6 +2,8 @@ import click
 from ibaqpy.commands.features2peptides import features2parquet
 from ibaqpy.commands.peptides2protein import peptides2protein
 from ibaqpy.commands.tsne_visualization import tsne_visualization
+from ibaqpy.commands.correct_batches import correct_batches
+
 import ibaqpy.__init__ as __init__
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
@@ -20,6 +22,7 @@ def cli():
 cli.add_command(features2parquet)
 cli.add_command(peptides2protein)
 cli.add_command(tsne_visualization)
+cli.add_command(correct_batches)
 
 def main():
     """

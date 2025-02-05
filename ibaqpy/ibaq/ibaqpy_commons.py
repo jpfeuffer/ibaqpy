@@ -22,6 +22,7 @@ INTENSITY = "Intensity"
 NORM_INTENSITY = "NormIntensity"
 REFERENCE = "Reference"
 SAMPLE_ID = "SampleID"
+SAMPLE_ID_REGEX = r'^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$'
 SEARCH_ENGINE = "searchScore"
 SCAN = "Scan"
 MBR = "MatchBetweenRuns"

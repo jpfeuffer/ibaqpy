@@ -17,3 +17,4 @@ venv
 /build/
 /dist/
 /**/__pycache__/
+.qodo
