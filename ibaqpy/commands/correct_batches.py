@@ -1,12 +1,13 @@
 import re
+from pathlib import Path
 from typing import Union
 
 import click
 import pandas as pd
 
-from ibaqpy.ibaq.ibaqpy_commons import SAMPLE_ID_REGEX, IBAQ_BEC
+from ibaqpy.ibaq.file_utils import (create_anndata, combine_ibaq_tsv_files)
+from ibaqpy.ibaq.ibaqpy_commons import SAMPLE_ID_REGEX, SAMPLE_ID, PROTEIN_NAME, IBAQ, IBAQ_BEC
 from ibaqpy.ibaq.ibaqpy_postprocessing import (
-    combine_ibaq_tsv_files,
     pivot_wider,
     pivot_longer,
 )
@@ -82,9 +83,11 @@ def run_batch_correction(
     comment: str,
     sep: str,
     output: str,
-    sample_id_column: str,
-    protein_id_column: str,
-    ibaq_column: str,
+    sample_id_column: str = SAMPLE_ID,
+    protein_id_column: str = PROTEIN_NAME,
+    ibaq_raw_column: str = IBAQ,
+    ibaq_corrected_column: str = IBAQ_BEC,
+    export_anndata = False,
 ) -> pd.DataFrame:
     """
     Runs the batch correction on iBAQ values from TSV files.
@@ -97,7 +100,9 @@ def run_batch_correction(
         output (str): Output file name for the combined iBAQ corrected values.
         sample_id_column (str): Sample ID column name.
         protein_id_column (str): Protein ID column name.
-        ibaq_column (str): iBAQ column name.
+        ibaq_raw_column (str): iBAQ raw column name.
+        ibaq_corrected_column (str): Name for the corrected iBAQ column.
+        export_anndata (bool): Export the raw and corrected iBAQ values to an AnnData object.
     """
     # Load the data
     try:
@@ -110,7 +115,7 @@ def run_batch_correction(
         df_ibaq,
         row_name=protein_id_column,
         col_name=sample_id_column,
-        values=ibaq_column,
+        values=ibaq_raw_column,
         fillna=True,
     )
 
@@ -130,7 +135,7 @@ def run_batch_correction(
         df_corrected,
         row_name=protein_id_column,
         col_name=sample_id_column,
-        values=IBAQ_BEC,
+        values=ibaq_corrected_column,
     )
 
     # Add the corrected ibaq values to the original dataframe.
@@ -145,6 +150,24 @@ def run_batch_correction(
             df_ibaq.to_csv(output, sep=sep, index=False)
         except Exception as e:
             raise ValueError(f"Failed to save output file: {str(e)}")
+
+    # Export the raw and corrected iBAQ values to an AnnData object
+    if export_anndata:
+        output_path = Path(output)
+        if not output_path.exists():
+            raise FileNotFoundError(f"Output file {output} does not exist!")
+        adata = create_anndata(
+            df_ibaq,
+            obs_col=sample_id_column,
+            var_col=protein_id_column,
+            value_col=ibaq_raw_column,
+            layer_cols=[ibaq_corrected_column],
+        )
+        adata_filename = output_path.with_suffix('.h5ad')
+        try:
+            adata.write(adata_filename)
+        except Exception as e:
+            raise ValueError(f"Failed to write AnnData object: {e}")
 
     return df_ibaq
 
@@ -182,16 +205,32 @@ def run_batch_correction(
     "--sample_id_column",
     help="Sample ID column name",
     required=False,
-    default="SampleID",
+    default=SAMPLE_ID,
 )
 @click.option(
     "-pid",
     "--protein_id_column",
     help="Protein ID column name",
     required=False,
-    default="ProteinName",
+    default=PROTEIN_NAME,
 )
-@click.option("-ibaq", "--ibaq_column", help="iBAQ column name", required=False, default="Ibaq")
+@click.option("-ibaq",
+              "--ibaq_raw_column",
+              help="Name of the raw iBAQ column",
+              required=False,
+              default=IBAQ
+        )
+@click.option(
+    "--ibaq_corrected_column",
+    help="Name for the corrected iBAQ column",
+    required=False,
+    default=IBAQ_BEC,
+)
+@click.option(
+    "--export_anndata",
+    help="Export the raw and corrected iBAQ values to an AnnData object",
+    is_flag=True,
+)
 @click.pass_context
 def correct_batches(
     ctx,
@@ -202,7 +241,9 @@ def correct_batches(
     output: str,
     sample_id_column: str,
     protein_id_column: str,
-    ibaq_column: str,
+    ibaq_raw_column: str,
+    ibaq_corrected_column: str,
+    export_anndata: bool,
 ):
     run_batch_correction(
         folder=folder,
@@ -212,5 +253,7 @@ def correct_batches(
         output=output,
         sample_id_column=sample_id_column,
         protein_id_column=protein_id_column,
-        ibaq_column=ibaq_column,
+        ibaq_raw_column=ibaq_raw_column,
+        ibaq_corrected_column=ibaq_corrected_column,
+        export_anndata=export_anndata,
     )

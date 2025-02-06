@@ -12,3 +12,4 @@ seaborn>=0.13.2
 typing_extensions>=4.6.3
 inmoose
 pytest~=8.3.4
+anndata~=0.10.9

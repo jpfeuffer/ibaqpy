@@ -2,9 +2,6 @@ import logging
 from typing import Union
 
 import pandas as pd
-import glob
-
-from pandas import DataFrame
 
 from ibaqpy.ibaq.ibaqpy_commons import (
     IBAQ,
@@ -18,7 +15,9 @@ from ibaqpy.ibaq.ibaqpy_commons import (
 )
 
 
-def remove_samples_low_protein_number(ibaq_df: pd.DataFrame, min_protein_num: int) -> pd.DataFrame:
+def remove_samples_low_protein_number(
+    ibaq_df: pd.DataFrame, min_protein_num: int
+) -> pd.DataFrame:
     """
     This functions takes an ibaq Dataframe with the following columns:
     - ProteinName
@@ -55,7 +54,9 @@ def remove_samples_low_protein_number(ibaq_df: pd.DataFrame, min_protein_num: in
 
 
 def remove_missing_values(
-    ibaq_df: pd.DataFrame, missingness_percentage: float = 30, expression_column: str = IBAQ
+    ibaq_df: pd.DataFrame,
+    missingness_percentage: float = 30,
+    expression_column: str = IBAQ,
 ) -> pd.DataFrame:
     """
     This functions takes an ibaq Dataframe with the following columns:
@@ -82,14 +83,18 @@ def remove_missing_values(
         raise ValueError("The input ibaq_df must be a pandas DataFrame.")
 
     if expression_column not in ibaq_df.columns:
-        raise ValueError(f"The expression column '{expression_column}' is not in the DataFrame.")
+        raise ValueError(
+            f"The expression column '{expression_column}' is not in the DataFrame."
+        )
 
     # Initial number of samples
     initial_sample_count = ibaq_df["SampleID"].nunique()
     logging.info(f"Initial number of samples: {initial_sample_count}")
 
     # Create a pivot table to organize data by ProteinName and SampleID
-    pivot_df = ibaq_df.pivot_table(index=PROTEIN_NAME, columns=SAMPLE_ID, values=expression_column)
+    pivot_df = ibaq_df.pivot_table(
+        index=PROTEIN_NAME, columns=SAMPLE_ID, values=expression_column
+    )
 
     # Remove samples where all proteins have missing values
     non_missing_samples = pivot_df.columns[pivot_df.notna().any(axis=0)]
@@ -138,62 +143,23 @@ def describe_expression_metrics(ibaq_df: pd.DataFrame) -> pd.DataFrame:
     :return: pd.DataFrame
     """
 
-    possible_expression_values = [IBAQ, IBAQ_NORMALIZED, IBAQ_LOG, IBAQ_PPB, TPA, COPYNUMBER]
+    possible_expression_values = [
+        IBAQ,
+        IBAQ_NORMALIZED,
+        IBAQ_LOG,
+        IBAQ_PPB,
+        TPA,
+        COPYNUMBER,
+    ]
 
     # Define the expression columns
-    expression_columns = [col for col in ibaq_df.columns if col in possible_expression_values]
+    expression_columns = [
+        col for col in ibaq_df.columns if col in possible_expression_values
+    ]
 
     # Get the metrics
     metrics = ibaq_df.groupby(SAMPLE_ID)[expression_columns].describe()
     return metrics
-
-
-def combine_ibaq_tsv_files(
-    dir_path: str, pattern: str = "*", comment: str = "#", sep: str = "\t"
-) -> DataFrame:
-    """
-    Combine multiple TSV files from a directory into a single pandas DataFrame.
-
-    Parameters
-    ----------
-    dir_path : str
-        Directory path containing the TSV files.
-    pattern : str, optional
-        Pattern to match files in the directory (default is '*').
-    comment : str, optional
-        Character to indicate the start of a comment line (default is '#').
-        It will skip lines starting with this character when reading the TSV files.
-    sep : str, optional
-        Delimiter to use for reading the TSV files (default is '\t').
-
-    Returns
-    -------
-    Optional[pd.DataFrame]
-        Combined DataFrame containing data from all TSV files, or None if no files match the pattern.
-
-    Examples
-    --------
-        dir_path = './ibaqpy-research-data/ibaq-hela-raw'
-        combined_df = combine_ibaq_tsv_files(dir_path, pattern='*ibaq.tsv', comment='#', sep='\t')
-    """
-    file_paths = glob.glob(f"{dir_path}/{pattern}")
-
-    if not file_paths:
-        raise FileNotFoundError(
-            f"No files found in the directory '{dir_path}' matching the pattern '{pattern}'."
-        )
-
-    dataframes = []
-
-    for file_path in file_paths:
-        # Read the TSV file, skipping lines that start with the comment character
-        df = pd.read_csv(file_path, sep=sep, comment=comment)
-        dataframes.append(df)
-
-    # Concatenate all DataFrames
-    combined_df = pd.concat(dataframes, ignore_index=True)
-
-    return combined_df
 
 
 def pivot_wider(
@@ -239,7 +205,9 @@ def pivot_wider(
         )
 
     # Use pivot_table to create the matrix
-    matrix = df.pivot_table(index=row_name, columns=col_name, values=values, aggfunc="first")
+    matrix = df.pivot_table(
+        index=row_name, columns=col_name, values=values, aggfunc="first"
+    )
 
     # Simplified NaN handling
     if fillna is True:  # Fill with 0 if True
@@ -250,7 +218,9 @@ def pivot_wider(
     return matrix
 
 
-def pivot_longer(df: pd.DataFrame, row_name: str, col_name: str, values: str) -> pd.DataFrame:
+def pivot_longer(
+    df: pd.DataFrame, row_name: str, col_name: str, values: str
+) -> pd.DataFrame:
     # Validate input DataFrame
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame")
@@ -263,10 +233,14 @@ def pivot_longer(df: pd.DataFrame, row_name: str, col_name: str, values: str) ->
     matrix_reset = df.reset_index()
 
     # Use pd.melt to convert the wide-format DataFrame to long-format
-    long_df = pd.melt(matrix_reset, id_vars=[row_name], var_name=col_name, value_name=values)
+    long_df = pd.melt(
+        matrix_reset, id_vars=[row_name], var_name=col_name, value_name=values
+    )
 
     # Remove rows with missing values if any
     if long_df[values].isna().any():
-        logging.warning(f"Found {long_df[values].isna().sum()} missing values in the result")
+        logging.warning(
+            f"Found {long_df[values].isna().sum()} missing values in the result"
+        )
 
     return long_df
